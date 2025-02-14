@@ -1,0 +1,57 @@
+const Report = require('./models/Report');
+
+require("dotenv").config();
+const express = require("express");
+const mongoose = require("mongoose");
+const cors = require("cors");
+
+const app = express();
+const PORT = process.env.PORT || 5000;
+const MONGO_URI = process.env.MONGO_URI || "mongodb://127.0.0.1:27017/crisis_reports";
+
+
+app.use(cors());
+app.use(express.json());
+
+
+mongoose.connect(MONGO_URI, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+}).then(() => console.log(" MongoDB Connected"))
+  .catch((err) => console.error(" MongoDB Connection Error:", err));
+
+const ReportSchema = new mongoose.Schema({
+    crisisType: { type: String, required: true },
+    location: { type: String, required: true },
+    severity: { type: String, required: true },
+    description: { type: String, required: true }
+});
+
+
+
+app.get("/api/reports", async (req, res) => {
+    try {
+        const reports = await Report.find();
+        res.json(reports);
+    } catch (err) {
+        res.status(500).json({ message: "Error fetching reports", error: err.message });
+    }
+});
+
+app.post("/api/reports", async (req, res) => {
+    try {
+        const { crisisType, location, severity, description } = req.body;
+        if (!crisisType || !location || !severity || !description) {
+            return res.status(400).json({ message: "All fields are required" });
+        }
+
+        const newReport = new Report({ crisisType, location, severity, description });
+        await newReport.save();
+        res.status(201).json(newReport);
+    } catch (err) {
+        res.status(500).json({ message: "Error saving report", error: err.message });
+    }
+});
+
+
+app.listen(PORT, () => console.log(` Server running on port ${PORT}`));
